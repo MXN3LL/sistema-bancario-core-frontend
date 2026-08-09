@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Movimientos - Banco Core</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <main class="history-container">
+        <a href="dashboard.html" class="back-link">&larr; Volver al dashboard</a>
+
+        <h1>Historial de movimientos</h1>
+
+        <div class="form-group">
+            <label for="account-selector">Cuenta</label>
+            <select id="account-selector" name="account-selector"></select>
+        </div>
+
+        <table class="movements-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+            <tbody id="movements-body">
+                <!-- Aquí JavaScript va a llenar las filas -->
+            </tbody>
+        </table>
+    </main>
+
+    <script src="js/historial.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferencias - Banco Core</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <main class="transfer-container">
+        <a href="dashboard.html" class="back-link">&larr; Volver al dashboard</a>
+
+        <form id="transfer-form" novalidate>
+            <h1>Nueva transferencia</h1>
+
+            <div class="form-group">
+                <label for="origin-account">Cuenta origen</label>
+                <select id="origin-account" name="origin-account" required></select>
+                <span class="error-message" id="origin-account-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="destination-account">Cuenta destino</label>
+                <input type="text" id="destination-account" name="destination-account" placeholder="Ej. ACC-1002" required>
+                <span class="error-message" id="destination-account-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="concept">Concepto</label>
+                <input type="text" id="concept" name="concept" placeholder="Ej. Pago de renta" required>
+                <span class="error-message" id="concept-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Monto</label>
+                <input type="number" id="amount" name="amount" step="0.01" min="0" required>
+                <span class="error-message" id="amount-error"></span>
+            </div>
+
+            <button type="submit">Transferir</button>
+
+            <p class="result-message" id="result-message"></p>
+        </form>
+    </main>
+
+    <script src="js/transferencias.js"></script>
+</body>
+</html>

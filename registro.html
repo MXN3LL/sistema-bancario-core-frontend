@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear cuenta - Banco Core</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="login-page">
+    <main class="login-container">
+        <div class="brand-mark"><span class="brand-dot"></span>Banco Core</div>
+
+        <form id="register-form" novalidate>
+            <h1>Crear cuenta</h1>
+            <p class="form-subhead">Regístrate para empezar a usar Banco Core</p>
+            <div class="heading-rule"></div>
+
+            <p class="auth-error" id="register-error"></p>
+
+            <div class="form-group">
+                <label for="name">Nombre completo</label>
+                <input type="text" id="name" name="name" required>
+                <span class="error-message" id="name-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Correo electrónico</label>
+                <input type="email" id="email" name="email" required>
+                <span class="error-message" id="email-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" required>
+                    <button type="button" class="toggle-password" id="toggle-password">Mostrar</button>
+                </div>
+                <div class="password-strength" id="password-strength" hidden>
+                    <div class="password-strength-track">
+                        <div class="password-strength-fill" id="password-strength-fill"></div>
+                    </div>
+                    <span class="password-strength-label" id="password-strength-label"></span>
+                </div>
+                <span class="error-message" id="password-error"></span>
+            </div>
+
+            <button type="submit" id="register-submit">Crear cuenta</button>
+
+            <p class="result-message" id="register-result"></p>
+
+            <a href="index.html" class="back-link">&larr; Ya tengo cuenta, iniciar sesión</a>
+        </form>
+    </main>
+    <script src="js/registro.js"></script>
+</body>
+</html>
