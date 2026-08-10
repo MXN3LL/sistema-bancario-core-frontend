@@ -1,53 +1,105 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transferencias - Banco Core</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transferencias - Banco Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-    <main class="transfer-container">
-        <a href="dashboard.html" class="back-link"><svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver al dashboard</a>
-        <div class="balance-strip">
-            <span class="balance-strip-label">Saldo disponible</span>
-            <span class="balance-strip-amount" id="origin-balance">$0.00</span>
+<body class="transferencias-page">
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div class="brand-mark"><span class="brand-dot"></span>Banco Core</div>
+      <div class="notif-wrapper">
+        <button type="button" class="notif-bell" id="notif-bell" aria-label="Notificaciones">
+          🔔<span class="notif-badge hidden" id="notif-badge">0</span>
+        </button>
+        <div class="notif-panel glass-card" id="notif-panel">
+          <div class="notif-panel-header">
+            <span>Notificaciones</span>
+            <button type="button" class="notif-clear" id="notif-clear">Borrar todo</button>
+          </div>
+          <div id="notif-list"></div>
         </div>
+      </div>
+    </div>
+    <nav class="app-nav">
+      <a href="dashboard.html"><span class="icon">＄</span> Dashboard</a>
+      <a href="transferencias.html"><span class="icon">→</span> Transferencias</a>
+      <a href="historial.html"><span class="icon">≡</span> Historial</a>
+    </nav>
+    <a href="#" class="logout-link" id="logout-link">Cerrar sesión</a>
+  </aside>
+
+  <main class="app-main">
+    <div class="app-topbar reveal">
+      <div>
+        <h1>Enviar transferencia</h1>
+        <p class="subtitle">Manda dinero a otra cuenta de forma instantánea</p>
+      </div>
+    </div>
+
+    <div class="transfer-layout">
+      <section class="glass-card transfer-form-card reveal">
+        <p class="auth-error" id="transfer-error"></p>
+        <p class="success-banner" id="transfer-success">
+          <span>Transferencia realizada con éxito.</span>
+          <button type="button" id="download-receipt-btn" class="notif-clear" style="margin-left:auto;">Descargar comprobante</button>
+        </p>
+
         <form id="transfer-form" novalidate>
-            <h1>Nueva transferencia</h1>
+          <div class="form-group">
+            <label for="origen">Cuenta de origen</label>
+            <select id="origen" name="origen" required
+              style="width:100%;padding:0.85rem 1rem;border-radius:10px;border:1px solid var(--surface-border);background:rgba(5,4,20,0.35);color:var(--text-primary);font-size:0.98rem;">
+              <option value="">Cargando cuentas…</option>
+            </select>
+            <span class="error-message" id="origen-error"></span>
+          </div>
 
-            <div class="form-group">
-                <label for="origin-account">Cuenta origen</label>
-                <select id="origin-account" name="origin-account" required></select>
-                <span class="error-message" id="origin-account-error"></span>
-            </div>
+          <div class="form-group">
+            <label for="destino">Cuenta destino</label>
+            <input type="text" id="destino" name="destino" placeholder="ACC-1002" required>
+            <span class="error-message" id="destino-error"></span>
+          </div>
 
-            <div class="form-group">
-                <label for="destination-account">Cuenta destino</label>
-                <input type="text" id="destination-account" name="destination-account" placeholder="Ej. ACC-1002" required>
-                <span class="error-message" id="destination-account-error"></span>
-            </div>
+          <div class="form-group">
+            <label for="monto">Monto a transferir</label>
+            <input type="number" id="monto" name="monto" placeholder="0.00" min="0.01" step="0.01" required>
+            <span class="error-message" id="monto-error"></span>
+          </div>
 
-            <div class="form-group">
-                <label for="concept">Concepto</label>
-                <input type="text" id="concept" name="concept" placeholder="Ej. Pago de renta" required>
-                <span class="error-message" id="concept-error"></span>
-            </div>
-
-            <div class="form-group">
-                <label for="amount">Monto</label>
-                <input type="number" id="amount" name="amount" step="0.01" min="0" required>
-                <span class="error-message" id="amount-error"></span>
-            </div>
-
-            <button type="submit">Transferir</button>
-
-            <p class="result-message" id="result-message"></p>
+          <button type="submit" id="transfer-submit" class="btn btn-primary btn-block">Transferir ahora</button>
         </form>
-    </main>
+      </section>
 
-    <script src="js/transferencias.js"></script>
+      <aside class="glass-card transfer-summary reveal">
+        <h2 style="font-size:1.05rem;margin-bottom:1rem;">Resumen</h2>
+        <div class="summary-row">
+          <span>Origen</span>
+          <span id="summary-origen">—</span>
+        </div>
+        <div class="summary-row">
+          <span>Destino</span>
+          <span id="summary-destino">—</span>
+        </div>
+        <div class="summary-row">
+          <span>Monto</span>
+          <span id="summary-monto">$0.00</span>
+        </div>
+        <p style="margin-top:1.25rem;font-size:0.8rem;">Las transferencias entre cuentas de Banco Core son instantáneas y sin comisión.</p>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script src="js/animations.js"></script>
+<script src="js/api.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/transferencias.js"></script>
 </body>
 </html>

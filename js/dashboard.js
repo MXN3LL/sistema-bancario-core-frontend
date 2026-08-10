@@ -1,125 +1,173 @@
-const API_BASE_URL = 'http://localhost:8080';
+document.addEventListener("DOMContentLoaded", async () => {
+  Auth.requireAuth();
 
-const token = localStorage.getItem('authToken');
-if (!token) {
-    window.location.href = 'index.html';
-}
+  document.getElementById("logout-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    Auth.logout();
+  });
 
-const greetingEl = document.querySelector('.dashboard-header h1');
-const accountsContainer = document.getElementById('accounts-container');
-const totalBalanceEl = document.getElementById('total-balance');
-const logoutBtn = document.getElementById('logout-btn');
-const emptyState = document.getElementById('empty-state');
-const openAccountBtn = document.getElementById('open-account-btn');
-const initialDepositInput = document.getElementById('initial-deposit');
+  const formatMoney = (value) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD" }).format(value || 0);
 
-function formatCurrency(amount) {
-    return Number(amount).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-}
+  const formatDate = (value) => {
+    if (!value) return "";
+    return new Date(value).toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+  };
 
-function authFetch(path, options) {
-    options = options || {};
-    options.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, options.headers || {});
-    return fetch(`${API_BASE_URL}${path}`, options).then(function (response) {
-        if (response.status === 401) {
-            localStorage.removeItem('authToken');
-            window.location.href = 'index.html';
-            return Promise.reject(new Error('Sesión inválida'));
+  let currentAccountId = null;
+  let currentAccountNumber = null;
+
+  async function loadDashboardData() {
+    try {
+      const user = await BancoAPI.me();
+      document.getElementById("user-name").textContent = user.name || user.email || "Cliente";
+      document.getElementById("user-initial").textContent = (user.name || user.email || "?")
+        .trim()
+        .charAt(0)
+        .toUpperCase();
+
+      const cuentas = await BancoAPI.listarCuentas();
+      document.getElementById("stat-cuentas").textContent = cuentas.length;
+
+      const openAccountBtn = document.getElementById("open-account-btn");
+      if (cuentas.length >= 1) {
+        openAccountBtn.disabled = true;
+        openAccountBtn.textContent = "Ya tienes una cuenta";
+        document.getElementById("open-account-card").style.display = "none";
+      } else {
+        openAccountBtn.disabled = false;
+        openAccountBtn.textContent = "+ Abrir cuenta";
+      }
+
+      if (cuentas.length) {
+        const principal = cuentas[0];
+        currentAccountId = principal.idAccount;
+        currentAccountNumber = principal.accountNumber || String(principal.idAccount);
+        document.getElementById("account-number-text").textContent = `Cuenta: ${currentAccountNumber}`;
+        document.getElementById("copy-account-btn").style.display = "inline-flex";
+        document.getElementById("balance-amount").textContent = formatMoney(principal.balance);
+
+        const movimientos = await BancoAPI.movimientos(principal.idAccount);
+        const lista = document.getElementById("recent-movements");
+
+        if (!movimientos.length) {
+          lista.innerHTML = '<div class="empty-state">Aún no tienes movimientos. Realiza tu primera transferencia.</div>';
+        } else {
+          lista.innerHTML = "";
+          const recientes = movimientos.slice(0, 5);
+          const entradas = recientes.filter((m) => m.type === "IN" || m.tipo === "entrada");
+          const salidas = recientes.filter((m) => m.type === "OUT" || m.tipo === "salida");
+
+          if (entradas[0]) document.getElementById("stat-ingreso").textContent = formatMoney(entradas[0].amount);
+          else document.getElementById("stat-ingreso").textContent = "—";
+
+          if (salidas[0]) document.getElementById("stat-egreso").textContent = formatMoney(salidas[0].amount);
+          else document.getElementById("stat-egreso").textContent = "—";
+
+          recientes.forEach((mov) => {
+            const esEntrada = mov.type === "IN" || mov.tipo === "entrada";
+            const item = document.createElement("div");
+            item.className = "movement-item glass-card";
+            item.innerHTML = `
+              <div class="movement-info">
+                <span class="movement-icon ${esEntrada ? "in" : "out"}">${esEntrada ? "↓" : "↑"}</span>
+                <div>
+                  <div class="movement-title">${mov.description || (esEntrada ? "Transferencia recibida" : "Transferencia enviada")}</div>
+                  <div class="movement-date">${formatDate(mov.date || mov.fecha)}</div>
+                </div>
+              </div>
+              <div class="movement-amount ${esEntrada ? "in" : "out"}">${esEntrada ? "+" : "-"}${formatMoney(mov.amount)}</div>
+            `;
+            lista.appendChild(item);
+          });
         }
-        return response;
-    });
-}
-
-function animateBalance(target) {
-    const duration = 700;
-    const start = performance.now();
-
-    function step(now) {
-        const progress = Math.min((now - start) / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        totalBalanceEl.textContent = formatCurrency(target * eased);
-        if (progress < 1) {
-            requestAnimationFrame(step);
-        }
+      } else {
+        document.getElementById("account-number-text").textContent = "Cuenta: —";
+        document.getElementById("copy-account-btn").style.display = "none";
+        document.getElementById("balance-amount").textContent = formatMoney(0);
+        document.getElementById("recent-movements").innerHTML =
+          '<div class="empty-state">Aún no tienes una cuenta abierta. Usa el botón "+ Abrir cuenta" arriba.</div>';
+      }
+    } catch (error) {
+      document.getElementById("recent-movements").innerHTML = `<div class="empty-state">${error.message}</div>`;
     }
+  }
 
-    requestAnimationFrame(step);
-}
+  await loadDashboardData();
 
-function loadProfile() {
-    authFetch('/api/auth/me')
-        .then(function (response) { return response.json(); })
-        .then(function (data) {
-            greetingEl.textContent = `Hola, ${data.name}`;
-        });
-}
-
-function loadAccounts() {
-    authFetch('/api/cuentas')
-        .then(function (response) { return response.json(); })
-        .then(renderAccounts);
-}
-
-function renderAccounts(accounts) {
-    accountsContainer.innerHTML = '';
-
-    if (accounts.length === 0) {
-        emptyState.hidden = false;
-        animateBalance(0);
-        return;
+  // ---- Copiar número de cuenta ----
+  const copyAccountBtn = document.getElementById("copy-account-btn");
+  copyAccountBtn.addEventListener("click", async () => {
+    if (!currentAccountNumber) return;
+    try {
+      await navigator.clipboard.writeText(currentAccountNumber);
+      const original = copyAccountBtn.textContent;
+      copyAccountBtn.textContent = "¡Copiado!";
+      setTimeout(() => (copyAccountBtn.textContent = original), 1500);
+    } catch {
+      alert(`Tu número de cuenta es: ${currentAccountNumber}`);
     }
+  });
 
-    emptyState.hidden = true;
+  // ---- Abrir cuenta ----
+  const openAccountBtn = document.getElementById("open-account-btn");
+  const openAccountCard = document.getElementById("open-account-card");
+  const openAccountForm = document.getElementById("open-account-form");
+  const openAccountCancel = document.getElementById("open-account-cancel");
+  const openAccountError = document.getElementById("open-account-error");
+  const openAccountSuccess = document.getElementById("open-account-success");
+  const depositInput = document.getElementById("initial-deposit");
+  const openAccountSubmit = document.getElementById("open-account-submit");
 
-    accounts.forEach(function (account, index) {
-        const li = document.createElement('li');
-        li.className = 'account-card';
-        li.style.animationDelay = (index * 0.08) + 's';
-        const last4 = account.accountNumber.slice(-4);
-        li.innerHTML = `
-            <div class="account-card-top">
-                <span class="account-card-type">Cuenta ${account.accountNumber}</span>
-                <svg class="chip-icon" viewBox="0 0 24 18"><rect x="0.5" y="0.5" width="23" height="17" rx="3"/><line x1="0.5" y1="6" x2="23.5" y2="6"/><line x1="9" y1="0.5" x2="9" y2="17.5"/></svg>
-            </div>
-            <div class="account-card-number">•••• ${last4}</div>
-            <div class="account-card-bottom">
-                <span class="account-card-status">${account.isActive ? 'Activa' : 'Inactiva'}</span>
-                <span class="account-card-balance">${formatCurrency(account.balance)}</span>
-            </div>
-        `;
-        accountsContainer.appendChild(li);
-    });
+  openAccountBtn.addEventListener("click", () => {
+    if (openAccountBtn.disabled) return;
+    const isHidden = openAccountCard.style.display === "none";
+    openAccountCard.style.display = isHidden ? "block" : "none";
+    openAccountBtn.textContent = isHidden ? "Ocultar" : "+ Abrir cuenta";
+  });
 
-    const totalBalance = accounts.reduce(function (sum, account) {
-        return sum + account.balance;
-    }, 0);
+  openAccountCancel.addEventListener("click", () => {
+    openAccountCard.style.display = "none";
+    openAccountBtn.textContent = "+ Abrir cuenta";
+    openAccountForm.reset();
+  });
 
-    animateBalance(totalBalance);
-}
+  openAccountForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    openAccountError.classList.remove("visible");
+    openAccountSuccess.classList.remove("visible");
 
-openAccountBtn.addEventListener('click', function () {
-    const deposit = Number(initialDepositInput.value) || 0;
+    const deposit = parseFloat(depositInput.value);
+    const depositErrorEl = document.getElementById("initial-deposit-error");
 
-    openAccountBtn.disabled = true;
-    openAccountBtn.textContent = 'Abriendo...';
+    if (isNaN(deposit) || deposit < 0) {
+      depositInput.classList.add("invalid");
+      depositErrorEl.textContent = "Ingresa un monto válido (puede ser 0)";
+      return;
+    }
+    if (deposit > 200) {
+      depositInput.classList.add("invalid");
+      depositErrorEl.textContent = "El depósito inicial no puede superar $200";
+      return;
+    }
+    depositInput.classList.remove("invalid");
+    depositErrorEl.textContent = "";
 
-    authFetch('/api/cuentas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initialDeposit: deposit })
-    })
-        .then(function (response) { return response.json(); })
-        .then(function () {
-            openAccountBtn.disabled = false;
-            openAccountBtn.textContent = 'Abrir mi primera cuenta';
-            loadAccounts();
-        });
+    openAccountSubmit.disabled = true;
+    openAccountSubmit.textContent = "Creando...";
+
+    try {
+      await BancoAPI.abrirCuenta({ initialDeposit: deposit });
+      openAccountSuccess.classList.add("visible");
+      addNotification("Cuenta creada con éxito ✅");
+      openAccountForm.reset();
+      await loadDashboardData();
+    } catch (error) {
+      openAccountError.textContent = error.message;
+      openAccountError.classList.add("visible");
+    } finally {
+      openAccountSubmit.disabled = false;
+      openAccountSubmit.textContent = "Crear cuenta";
+    }
+  });
 });
-
-logoutBtn.addEventListener('click', function () {
-    localStorage.removeItem('authToken');
-    window.location.href = 'index.html';
-});
-
-loadProfile();
-loadAccounts();

@@ -1,111 +1,114 @@
-const API_BASE_URL = 'http://localhost:8080';
+document.addEventListener("DOMContentLoaded", async () => {
+  Auth.requireAuth();
 
-const token = localStorage.getItem('authToken');
-if (!token) {
-    window.location.href = 'index.html';
-}
+  document.getElementById("logout-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    Auth.logout();
+  });
 
-function authFetch(path, options) {
-    options = options || {};
-    options.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, options.headers || {});
-    return fetch(`${API_BASE_URL}${path}`, options).then(function (response) {
-        if (response.status === 401) {
-            localStorage.removeItem('authToken');
-            window.location.href = 'index.html';
-            return Promise.reject(new Error('Sesión inválida'));
-        }
-        return response;
+  const formatMoney = (value) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD" }).format(value || 0);
+
+  const formatDate = (value) => {
+    if (!value) return "";
+    return new Date(value).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
-}
+  };
 
-function formatCurrency(amount) {
-    return Number(amount).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-}
+  const lista = document.getElementById("movement-list");
+  let todosLosMovimientos = [];
 
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+  function esMovimientoEntrada(mov) {
+    return mov.type === "IN" || mov.tipo === "entrada";
+  }
 
-const accountSelector = document.getElementById('account-selector');
-const movementsBody = document.getElementById('movements-body');
-let myName = '';
-
-const arrowDown = '<svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
-const arrowUp = '<svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
-
-function loadProfile() {
-    return authFetch('/api/auth/me')
-        .then(function (response) { return response.json(); })
-        .then(function (data) { myName = data.name; });
-}
-
-function loadAccounts() {
-    authFetch('/api/cuentas')
-        .then(function (response) { return response.json(); })
-        .then(function (accounts) {
-            accountSelector.innerHTML = '';
-
-            if (accounts.length === 0) {
-                const option = document.createElement('option');
-                option.textContent = 'No tienes cuentas todavía';
-                accountSelector.appendChild(option);
-                movementsBody.innerHTML = '<tr><td colspan="4">No tienes cuentas todavía.</td></tr>';
-                return;
-            }
-
-            accounts.forEach(function (account) {
-                const option = document.createElement('option');
-                option.value = account.idAccount;
-                option.textContent = `Cuenta ${account.accountNumber}`;
-                accountSelector.appendChild(option);
-            });
-
-            loadMovements(accountSelector.value);
-        });
-}
-
-function loadMovements(accountId) {
-    authFetch(`/api/cuentas/${accountId}/movimientos`)
-        .then(function (response) { return response.json(); })
-        .then(renderMovements);
-}
-
-function renderMovements(movements) {
-    movementsBody.innerHTML = '';
-
-    if (movements.length === 0) {
-        movementsBody.innerHTML = '<tr><td colspan="4">Todavía no hay movimientos en esta cuenta.</td></tr>';
-        return;
+  function renderMovimientos(movimientos) {
+    if (!movimientos.length) {
+      lista.innerHTML = '<div class="empty-state">No hay movimientos que coincidan con estos filtros.</div>';
+      return;
     }
 
-    movements.sort(function (a, b) {
-        return new Date(b.transferDate) - new Date(a.transferDate);
+    lista.innerHTML = "";
+    movimientos.forEach((mov, i) => {
+      const esEntrada = esMovimientoEntrada(mov);
+      const item = document.createElement("div");
+      item.className = "movement-item glass-card reveal";
+      item.style.setProperty("--stagger-index", i % 8);
+      item.innerHTML = `
+        <div class="movement-info">
+          <span class="movement-icon ${esEntrada ? "in" : "out"}">${esEntrada ? "↓" : "↑"}</span>
+          <div>
+            <div class="movement-title">${mov.description || (esEntrada ? "Transferencia recibida" : "Transferencia enviada")}</div>
+            <div class="movement-date">${formatDate(mov.date || mov.fecha)}</div>
+          </div>
+        </div>
+        <div class="movement-amount ${esEntrada ? "in" : "out"}">${esEntrada ? "+" : "-"}${formatMoney(mov.amount)}</div>
+      `;
+      lista.appendChild(item);
     });
 
-    movements.forEach(function (movement) {
-        const sentByMe = movement.nameOrigin === myName;
-        const receivedByMe = movement.nameDestiny === myName;
-        let badge = `<span class="movement-badge">Transferencia</span>`;
-        if (sentByMe && !receivedByMe) {
-            badge = `<span class="movement-badge out">${arrowUp} -${formatCurrency(movement.amount)}</span>`;
-        } else if (receivedByMe && !sentByMe) {
-            badge = `<span class="movement-badge in">${arrowDown} +${formatCurrency(movement.amount)}</span>`;
-        }
+    initScrollReveal();
+  }
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${formatDate(movement.transferDate)}</td>
-            <td>${movement.nameOrigin}</td>
-            <td>${movement.nameDestiny}</td>
-            <td>${badge}</td>
-        `;
-        movementsBody.appendChild(row);
+  function aplicarFiltros() {
+    const desde = document.getElementById("filter-date-from").value;
+    const hasta = document.getElementById("filter-date-to").value;
+    const montoMin = parseFloat(document.getElementById("filter-amount-min").value);
+    const montoMax = parseFloat(document.getElementById("filter-amount-max").value);
+    const tipo = document.getElementById("filter-type").value;
+
+    const filtrados = todosLosMovimientos.filter((mov) => {
+      const fechaMov = new Date(mov.date || mov.fecha);
+
+      if (desde && fechaMov < new Date(desde)) return false;
+      if (hasta) {
+        const hastaFin = new Date(hasta);
+        hastaFin.setHours(23, 59, 59, 999);
+        if (fechaMov > hastaFin) return false;
+      }
+      if (!isNaN(montoMin) && mov.amount < montoMin) return false;
+      if (!isNaN(montoMax) && mov.amount > montoMax) return false;
+
+      const esEntrada = esMovimientoEntrada(mov);
+      if (tipo === "in" && !esEntrada) return false;
+      if (tipo === "out" && esEntrada) return false;
+
+      return true;
     });
-}
 
-accountSelector.addEventListener('change', function () {
-    loadMovements(accountSelector.value);
+    renderMovimientos(filtrados);
+  }
+
+  try {
+    const cuentas = await BancoAPI.listarCuentas();
+    if (!cuentas.length) {
+      lista.innerHTML = '<div class="empty-state">Aún no tienes una cuenta abierta.</div>';
+      return;
+    }
+
+    todosLosMovimientos = await BancoAPI.movimientos(cuentas[0].idAccount);
+
+    if (!todosLosMovimientos.length) {
+      lista.innerHTML = '<div class="empty-state">Aún no tienes movimientos registrados.</div>';
+      return;
+    }
+
+    renderMovimientos(todosLosMovimientos);
+
+    ["filter-date-from", "filter-date-to", "filter-amount-min", "filter-amount-max", "filter-type"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", aplicarFiltros);
+    });
+
+    document.getElementById("clear-filters-btn").addEventListener("click", () => {
+      document.getElementById("filters-form").reset();
+      renderMovimientos(todosLosMovimientos);
+    });
+  } catch (error) {
+    lista.innerHTML = `<div class="empty-state">${error.message}</div>`;
+  }
 });
-
-loadProfile().then(loadAccounts);

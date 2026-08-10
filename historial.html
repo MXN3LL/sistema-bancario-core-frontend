@@ -1,39 +1,92 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historial de Movimientos - Banco Core</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Historial - Banco Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-    <main class="history-container">
-        <a href="dashboard.html" class="back-link"><svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver al dashboard</a>
-
-        <h1>Historial de movimientos</h1>
-
-        <div class="form-group">
-            <label for="account-selector">Cuenta</label>
-            <select id="account-selector" name="account-selector"></select>
+<body class="historial-page">
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div class="brand-mark"><span class="brand-dot"></span>Banco Core</div>
+      <div class="notif-wrapper">
+        <button type="button" class="notif-bell" id="notif-bell" aria-label="Notificaciones">
+          🔔<span class="notif-badge hidden" id="notif-badge">0</span>
+        </button>
+        <div class="notif-panel glass-card" id="notif-panel">
+          <div class="notif-panel-header">
+            <span>Notificaciones</span>
+            <button type="button" class="notif-clear" id="notif-clear">Borrar todo</button>
+          </div>
+          <div id="notif-list"></div>
         </div>
+      </div>
+    </div>
+    <nav class="app-nav">
+      <a href="dashboard.html"><span class="icon">＄</span> Dashboard</a>
+      <a href="transferencias.html"><span class="icon">→</span> Transferencias</a>
+      <a href="historial.html"><span class="icon">≡</span> Historial</a>
+    </nav>
+    <a href="#" class="logout-link" id="logout-link">Cerrar sesión</a>
+  </aside>
 
-        <table class="movements-table">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Origen</th>
-                    <th>Destino</th>
-                    <th>Monto</th>
-                </tr>
-            </thead>
-            <tbody id="movements-body">
-                <!-- Aquí JavaScript va a llenar las filas -->
-            </tbody>
-        </table>
-    </main>
+  <main class="app-main">
+    <div class="app-topbar reveal">
+      <div>
+        <h1>Historial de movimientos</h1>
+        <p class="subtitle">Todas tus transferencias, entrantes y salientes</p>
+      </div>
+    </div>
 
-    <script src="js/historial.js"></script>
+    <section class="glass-card reveal" style="padding:1.5rem 1.75rem; margin-bottom:1.5rem;">
+      <div class="section-heading">
+        <h2>Filtrar movimientos</h2>
+        <button type="button" id="clear-filters-btn" class="notif-clear">Limpiar filtros</button>
+      </div>
+      <form id="filters-form" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
+          <label for="filter-date-from">Desde</label>
+          <input type="date" id="filter-date-from">
+        </div>
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
+          <label for="filter-date-to">Hasta</label>
+          <input type="date" id="filter-date-to">
+        </div>
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:130px;">
+          <label for="filter-amount-min">Monto mínimo</label>
+          <input type="number" id="filter-amount-min" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:130px;">
+          <label for="filter-amount-max">Monto máximo</label>
+          <input type="number" id="filter-amount-max" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
+          <label for="filter-type">Tipo</label>
+          <select id="filter-type" style="width:100%;padding:0.85rem 1rem;border-radius:10px;border:1px solid var(--surface-border);background:rgba(5,4,20,0.35);color:var(--text-primary);font-size:0.98rem;">
+            <option value="">Todos</option>
+            <option value="in">Solo entradas</option>
+            <option value="out">Solo salidas</option>
+          </select>
+        </div>
+      </form>
+    </section>
+
+    <section class="glass-card reveal" style="padding:1.75rem;">
+      <div class="movement-list" id="movement-list">
+        <div class="empty-state">Cargando movimientos…</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="js/animations.js"></script>
+<script src="js/api.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/historial.js"></script>
 </body>
 </html>

@@ -1,136 +1,138 @@
-const API_BASE_URL = 'http://localhost:8080';
+document.addEventListener("DOMContentLoaded", async () => {
+  Auth.requireAuth();
 
-const token = localStorage.getItem('authToken');
-if (!token) {
-    window.location.href = 'index.html';
-}
+  document.getElementById("logout-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    Auth.logout();
+  });
 
-function authFetch(path, options) {
-    options = options || {};
-    options.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, options.headers || {});
-    return fetch(`${API_BASE_URL}${path}`, options).then(function (response) {
-        if (response.status === 401) {
-            localStorage.removeItem('authToken');
-            window.location.href = 'index.html';
-            return Promise.reject(new Error('Sesión inválida'));
-        }
-        return response;
-    });
-}
+  const form = document.getElementById("transfer-form");
+  const origenSelect = document.getElementById("origen");
+  const destinoInput = document.getElementById("destino");
+  const montoInput = document.getElementById("monto");
+  const submitBtn = document.getElementById("transfer-submit");
+  const errorBanner = document.getElementById("transfer-error");
+  const successBanner = document.getElementById("transfer-success");
 
-function formatCurrency(amount) {
-    return Number(amount).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-}
+  const formatMoney = (value) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD" }).format(value || 0);
 
-const transferForm = document.getElementById('transfer-form');
-const originSelect = document.getElementById('origin-account');
-const destinationInput = document.getElementById('destination-account');
-const conceptInput = document.getElementById('concept');
-const amountInput = document.getElementById('amount');
-const originBalanceEl = document.getElementById('origin-balance');
+  function updateSummary() {
+    const selected = origenSelect.options[origenSelect.selectedIndex];
+    document.getElementById("summary-origen").textContent = selected?.dataset.label || "—";
+    document.getElementById("summary-destino").textContent = destinoInput.value.trim() || "—";
+    document.getElementById("summary-monto").textContent = formatMoney(parseFloat(montoInput.value) || 0);
+  }
 
-const destinationError = document.getElementById('destination-account-error');
-const conceptError = document.getElementById('concept-error');
-const amountError = document.getElementById('amount-error');
-const resultMessage = document.getElementById('result-message');
+  [origenSelect, destinoInput, montoInput].forEach((el) => el.addEventListener("input", updateSummary));
 
-let myAccounts = [];
+  try {
+    const cuentas = await BancoAPI.listarCuentas();
+    if (!cuentas.length) {
+      origenSelect.innerHTML = '<option value="">No tienes cuentas disponibles</option>';
+    } else {
+      origenSelect.innerHTML = cuentas
+        .map(
+          (c) =>
+            `<option value="${c.idAccount}" data-label="${c.accountNumber || c.idAccount}">${c.accountNumber || `Cuenta ${c.idAccount}`}</option>`
+        )
+        .join("");
+      updateSummary();
+    }
+  } catch (error) {
+    origenSelect.innerHTML = `<option value="">${error.message}</option>`;
+  }
 
-function updateBalanceStrip() {
-    const selected = myAccounts.find(function (a) { return a.idAccount === Number(originSelect.value); });
-    originBalanceEl.textContent = formatCurrency(selected ? selected.balance : 0);
-}
+  function showFieldError(input, message) {
+    input.classList.toggle("invalid", Boolean(message));
+    const errorEl = document.getElementById(`${input.id}-error`);
+    if (errorEl) errorEl.textContent = message || "";
+  }
 
-function loadAccounts() {
-    authFetch('/api/cuentas')
-        .then(function (response) { return response.json(); })
-        .then(function (accounts) {
-            myAccounts = accounts;
-            originSelect.innerHTML = '';
+  function validate() {
+    let valid = true;
+    if (!origenSelect.value) {
+      showFieldError(origenSelect, "Selecciona una cuenta de origen");
+      valid = false;
+    } else {
+      showFieldError(origenSelect, "");
+    }
+    if (!destinoInput.value.trim()) {
+      showFieldError(destinoInput, "Ingresa la cuenta destino");
+      valid = false;
+    } else {
+      showFieldError(destinoInput, "");
+    }
+    const monto = parseFloat(montoInput.value);
+    if (!monto || monto <= 0) {
+      showFieldError(montoInput, "Ingresa un monto válido");
+      valid = false;
+    } else {
+      showFieldError(montoInput, "");
+    }
+    return valid;
+  }
 
-            if (accounts.length === 0) {
-                const option = document.createElement('option');
-                option.textContent = 'No tienes cuentas todavía';
-                originSelect.appendChild(option);
-                originBalanceEl.textContent = formatCurrency(0);
-                return;
-            }
+  const downloadReceiptBtn = document.getElementById("download-receipt-btn");
+  let lastTransfer = null;
 
-            accounts.forEach(function (account) {
-                const option = document.createElement('option');
-                option.value = account.idAccount;
-                option.textContent = `Cuenta ${account.accountNumber}`;
-                originSelect.appendChild(option);
-            });
+  function descargarComprobante() {
+    if (!lastTransfer) return;
+    const contenido = `BANCO CORE — Comprobante de transferencia
+=========================================
+Fecha:            ${new Date().toLocaleString("es-MX")}
+Cuenta origen:     ${lastTransfer.origenLabel}
+Cuenta destino:    ${lastTransfer.destino}
+Monto:             ${formatMoney(lastTransfer.monto)}
+=========================================
+Este comprobante fue generado desde tu banca en línea.`;
 
-            updateBalanceStrip();
-        });
-}
+    const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `comprobante-transferencia-${Date.now()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 
-originSelect.addEventListener('change', updateBalanceStrip);
+  downloadReceiptBtn.addEventListener("click", descargarComprobante);
 
-transferForm.addEventListener('submit', function (event) {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    errorBanner.classList.remove("visible");
+    successBanner.classList.remove("visible");
 
-    resultMessage.textContent = '';
-    resultMessage.className = 'result-message';
+    if (!validate()) return;
 
-    let isValid = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Transfiriendo...";
 
-    if (destinationInput.value.trim() === '') {
-        destinationError.textContent = 'La cuenta destino es obligatoria';
-        isValid = false;
-    } else {
-        destinationError.textContent = '';
+    try {
+      await BancoAPI.transferir({
+        idAccountOrigin: Number(origenSelect.value),
+        numberAccountDestiny: destinoInput.value.trim(),
+        amount: parseFloat(montoInput.value),
+      });
+
+      lastTransfer = {
+        origenLabel: origenSelect.options[origenSelect.selectedIndex]?.dataset.label || origenSelect.value,
+        destino: destinoInput.value.trim(),
+        monto: parseFloat(montoInput.value),
+      };
+
+      successBanner.classList.add("visible");
+      addNotification(`Transferencia enviada: ${formatMoney(parseFloat(montoInput.value))} a ${destinoInput.value.trim()} 💸`);
+      form.reset();
+      updateSummary();
+    } catch (error) {
+      errorBanner.textContent = error.message;
+      errorBanner.classList.add("visible");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Transferir ahora";
     }
-
-    if (conceptInput.value.trim() === '') {
-        conceptError.textContent = 'El concepto es obligatorio';
-        isValid = false;
-    } else {
-        conceptError.textContent = '';
-    }
-
-    const amount = Number(amountInput.value);
-
-    if (!amountInput.value || amount <= 0) {
-        amountError.textContent = 'El monto debe ser mayor a cero';
-        isValid = false;
-    } else {
-        amountError.textContent = '';
-    }
-
-    if (!isValid || myAccounts.length === 0) {
-        return;
-    }
-
-    authFetch('/api/transacciones/transferir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            idAccountOrigin: Number(originSelect.value),
-            numberAccountDestiny: destinationInput.value.trim(),
-            amount: amount
-        })
-    })
-        .then(function (response) {
-            return response.json().then(function (data) {
-                if (!response.ok) {
-                    throw new Error(data.message || 'No se pudo completar la transferencia');
-                }
-                return data;
-            });
-        })
-        .then(function (data) {
-            resultMessage.textContent = `Transferencia exitosa por ${formatCurrency(data.amount)} a ${data.nameDestiny}`;
-            resultMessage.classList.add('success');
-            transferForm.reset();
-            loadAccounts();
-        })
-        .catch(function (error) {
-            resultMessage.textContent = error.message;
-            resultMessage.classList.add('error');
-        });
+  });
 });
-
-loadAccounts();

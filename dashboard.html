@@ -1,43 +1,115 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Banco Core</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Banco Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-    <header class="dashboard-header">
-        <h1>Hola, Usuario</h1>
-        <button id="logout-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Cerrar sesión</button>
-    </header>
-
-    <main class="dashboard-container">
-        <section class="balance-summary">
-            <p class="balance-label">Saldo total disponible</p>
-            <p class="balance-amount" id="total-balance">$0.00</p>
-            <span class="trust-badge"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.25 3.4 9.74 8 11 4.6-1.26 8-5.75 8-11V5l-8-3z"/></svg> Conexión segura</span>
-        </section>
-        <div class="dashboard-nav">
-            <a href="transferencias.html"><svg class="icon" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> Transferir</a>
-            <a href="historial.html"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg> Historial</a>
+<body class="dashboard-page">
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div class="brand-mark"><span class="brand-dot"></span>Banco Core</div>
+      <div class="notif-wrapper">
+        <button type="button" class="notif-bell" id="notif-bell" aria-label="Notificaciones">
+          🔔<span class="notif-badge hidden" id="notif-badge">0</span>
+        </button>
+        <div class="notif-panel glass-card" id="notif-panel">
+          <div class="notif-panel-header">
+            <span>Notificaciones</span>
+            <button type="button" class="notif-clear" id="notif-clear">Borrar todo</button>
+          </div>
+          <div id="notif-list"></div>
         </div>
-        <section class="accounts-list">
-            <h2>Mis cuentas</h2>
-            <ul id="accounts-container"></ul>
-            <div class="empty-state" id="empty-state" hidden>
-                <p>Todavía no tienes ninguna cuenta.</p>
-                <div class="empty-state-form">
-                    <input type="number" id="initial-deposit" placeholder="Depósito inicial" step="0.01" min="0" value="0">
-                    <button type="button" id="open-account-btn">Abrir mi primera cuenta</button>
-                </div>
-            </div>
-          
-        </section>
-    </main>
+      </div>
+    </div>
+    <nav class="app-nav">
+      <a href="dashboard.html"><span class="icon">＄</span> Dashboard</a>
+      <a href="transferencias.html"><span class="icon">→</span> Transferencias</a>
+      <a href="historial.html"><span class="icon">≡</span> Historial</a>
+    </nav>
+    <a href="#" class="logout-link" id="logout-link">Cerrar sesión</a>
+  </aside>
 
-    <script src="js/dashboard.js"></script>
+  <main class="app-main">
+    <div class="app-topbar reveal">
+      <div>
+        <h1>Hola de nuevo 👋</h1>
+        <p class="subtitle">Este es el resumen de tu cuenta hoy</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <div class="user-chip glass-card">
+          <span class="avatar" id="user-initial">•</span>
+          <span id="user-name">Cargando…</span>
+        </div>
+        <button type="button" id="open-account-btn" class="btn btn-ghost">+ Abrir cuenta</button>
+      </div>
+    </div>
+
+    <section class="glass-card reveal" id="open-account-card" style="display:none; padding:1.75rem; margin-bottom:2rem;">
+      <div class="section-heading">
+        <h2>Abrir nueva cuenta</h2>
+      </div>
+      <p class="auth-error" id="open-account-error"></p>
+      <p class="success-banner" id="open-account-success">Cuenta creada con éxito.</p>
+      <form id="open-account-form" novalidate style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+        <div class="form-group" style="margin-bottom:0; flex:1; min-width:200px;">
+          <label for="initial-deposit">Depósito inicial (máximo $200)</label>
+          <input type="number" id="initial-deposit" name="initial-deposit" placeholder="0.00" min="0" max="200" step="0.01" required>
+          <span class="error-message" id="initial-deposit-error"></span>
+        </div>
+        <button type="submit" id="open-account-submit" class="btn btn-primary">Crear cuenta</button>
+        <button type="button" id="open-account-cancel" class="btn btn-ghost">Cancelar</button>
+      </form>
+    </section>
+
+    <section class="balance-card glass-card reveal">
+      <span class="eyebrow">Saldo disponible</span>
+      <div class="balance-amount" id="balance-amount">$0.00</div>
+      <div class="account-number" id="account-number" style="display:flex; align-items:center; gap:0.5rem;">
+        <span id="account-number-text">Cuenta: —</span>
+        <button type="button" id="copy-account-btn" class="notif-clear" style="display:none;">Copiar</button>
+      </div>
+      <div class="balance-actions" style="margin-top:1.25rem;">
+        <a href="transferencias.html" class="btn btn-primary">Transferir dinero</a>
+        <a href="historial.html" class="btn btn-ghost">Ver movimientos</a>
+      </div>
+    </section>
+
+    <div class="card-grid">
+      <div class="glass-card stat-card reveal">
+        <div class="stat-label">Cuentas activas</div>
+        <div class="stat-value" id="stat-cuentas">—</div>
+      </div>
+      <div class="glass-card stat-card positive reveal">
+        <div class="stat-label">Último ingreso</div>
+        <div class="stat-value" id="stat-ingreso">—</div>
+      </div>
+      <div class="glass-card stat-card negative reveal">
+        <div class="stat-label">Último egreso</div>
+        <div class="stat-value" id="stat-egreso">—</div>
+      </div>
+    </div>
+
+    <section class="glass-card reveal" style="padding:1.75rem;">
+      <div class="section-heading">
+        <h2>Movimientos recientes</h2>
+        <a href="historial.html" class="forgot-link">Ver todo →</a>
+      </div>
+      <div class="movement-list" id="recent-movements">
+        <div class="empty-state">Cargando movimientos…</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="js/animations.js"></script>
+<script src="js/api.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/dashboard.js"></script>
 </body>
 </html>

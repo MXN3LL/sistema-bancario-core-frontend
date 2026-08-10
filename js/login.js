@@ -1,90 +1,86 @@
-const API_BASE_URL = 'http://localhost:8080';
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("login-form");
+  const authError = document.getElementById("auth-error");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const submitBtn = document.getElementById("login-submit");
+  const rememberEmail = document.getElementById("remember-email");
 
-const loginForm = document.getElementById('login-form');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
-const emailError = document.getElementById('email-error');
-const passwordError = document.getElementById('password-error');
-const authError = document.getElementById('auth-error');
-const loginSubmit = document.getElementById('login-submit');
-const rememberCheckbox = document.getElementById('remember-email');
-const togglePasswordBtn = document.getElementById('toggle-password');
-
-const savedEmail = localStorage.getItem('rememberedEmail');
-if (savedEmail) {
+  const savedEmail = localStorage.getItem("banco_core_remembered_email");
+  if (savedEmail) {
     emailInput.value = savedEmail;
-    rememberCheckbox.checked = true;
-}
+    rememberEmail.checked = true;
+  }
 
-togglePasswordBtn.addEventListener('click', function () {
-    const isHidden = passwordInput.type === 'password';
-    passwordInput.type = isHidden ? 'text' : 'password';
-    togglePasswordBtn.textContent = isHidden ? 'Ocultar' : 'Mostrar';
-});
+  function showFieldError(input, message) {
+    input.classList.toggle("invalid", Boolean(message));
+    const errorEl = document.getElementById(`${input.id}-error`);
+    if (errorEl) errorEl.textContent = message || "";
+  }
 
-loginForm.addEventListener('submit', function (event) {
+  function validateEmail() {
+    if (!emailInput.value.trim()) {
+      showFieldError(emailInput, "Ingresa tu correo electrónico");
+      return false;
+    }
+    showFieldError(emailInput, "");
+    return true;
+  }
+
+  function validatePassword() {
+    if (!passwordInput.value) {
+      showFieldError(passwordInput, "Ingresa tu contraseña");
+      return false;
+    }
+    showFieldError(passwordInput, "");
+    return true;
+  }
+
+  function validate() {
+    const emailOk = validateEmail();
+    const passwordOk = validatePassword();
+    return emailOk && passwordOk;
+  }
+
+  emailInput.addEventListener("blur", validateEmail);
+  passwordInput.addEventListener("blur", validatePassword);
+  emailInput.addEventListener("input", () => {
+    if (emailInput.classList.contains("invalid")) validateEmail();
+  });
+  passwordInput.addEventListener("input", () => {
+    if (passwordInput.classList.contains("invalid")) validatePassword();
+  });
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    authError.classList.remove("visible");
 
-    authError.textContent = '';
-    authError.classList.remove('visible');
+    if (!validate()) return;
 
-    let isValid = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Entrando...";
 
-    if (emailInput.value.trim() === '' || !emailInput.value.includes('@')) {
-        emailError.textContent = 'Ingresa un correo válido';
-        isValid = false;
-    } else {
-        emailError.textContent = '';
+    try {
+      const data = await BancoAPI.login({
+        email: emailInput.value.trim(),
+        password: passwordInput.value,
+      });
+
+      Auth.setToken(data.token);
+
+      if (rememberEmail.checked) {
+        localStorage.setItem("banco_core_remembered_email", emailInput.value.trim());
+      } else {
+        localStorage.removeItem("banco_core_remembered_email");
+      }
+
+      window.location.href = "dashboard.html";
+    } catch (error) {
+      authError.textContent = error.message;
+      authError.classList.add("visible");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Entrar";
     }
-
-    if (passwordInput.value.trim() === '') {
-        passwordError.textContent = 'La contraseña es obligatoria';
-        isValid = false;
-    } else {
-        passwordError.textContent = '';
-    }
-
-    if (!isValid) {
-        return;
-    }
-
-    if (rememberCheckbox.checked) {
-        localStorage.setItem('rememberedEmail', emailInput.value.trim());
-    } else {
-        localStorage.removeItem('rememberedEmail');
-    }
-
-    loginSubmit.disabled = true;
-    loginSubmit.textContent = 'Verificando...';
-
-    fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            email: emailInput.value.trim(),
-            password: passwordInput.value
-        })
-    })
-        .then(function (response) {
-            return response.json().then(function (data) {
-                if (!response.ok) {
-                    throw new Error(data.message || 'Credenciales incorrectas');
-                }
-                return data;
-            });
-        })
-        .then(function (data) {
-            localStorage.setItem('authToken', data.token);
-            window.location.href = 'dashboard.html';
-        })
-        .catch(function (error) {
-            if (error instanceof TypeError) {
-                authError.textContent = 'No se pudo conectar con el servidor. Verifica que el backend esté corriendo.';
-            } else {
-                authError.textContent = error.message;
-            }
-            authError.classList.add('visible');
-            loginSubmit.disabled = false;
-            loginSubmit.textContent = 'Entrar';
-        });
+  });
 });
