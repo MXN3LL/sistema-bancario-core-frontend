@@ -11,17 +11,18 @@
 <body>
     <header class="dashboard-header">
         <h1>Hola, Usuario</h1>
-        <button id="logout-btn">Cerrar sesión</button>
+        <button id="logout-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Cerrar sesión</button>
     </header>
 
     <main class="dashboard-container">
         <section class="balance-summary">
             <p class="balance-label">Saldo total disponible</p>
             <p class="balance-amount" id="total-balance">$0.00</p>
+            <span class="trust-badge"><svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.25 3.4 9.74 8 11 4.6-1.26 8-5.75 8-11V5l-8-3z"/></svg> Conexión segura</span>
         </section>
         <div class="dashboard-nav">
-            <a href="transferencias.html" class="nav-link">Transferir</a>
-            <a href="historial.html" class="nav-link">Historial</a>
+            <a href="transferencias.html"><svg class="icon" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> Transferir</a>
+            <a href="historial.html"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg> Historial</a>
         </div>
         <section class="accounts-list">
             <h2>Mis cuentas</h2>

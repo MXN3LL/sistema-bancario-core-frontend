@@ -29,6 +29,16 @@ function formatDate(dateString) {
 
 const accountSelector = document.getElementById('account-selector');
 const movementsBody = document.getElementById('movements-body');
+let myName = '';
+
+const arrowDown = '<svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
+const arrowUp = '<svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
+
+function loadProfile() {
+    return authFetch('/api/auth/me')
+        .then(function (response) { return response.json(); })
+        .then(function (data) { myName = data.name; });
+}
 
 function loadAccounts() {
     authFetch('/api/cuentas')
@@ -74,12 +84,21 @@ function renderMovements(movements) {
     });
 
     movements.forEach(function (movement) {
+        const sentByMe = movement.nameOrigin === myName;
+        const receivedByMe = movement.nameDestiny === myName;
+        let badge = `<span class="movement-badge">Transferencia</span>`;
+        if (sentByMe && !receivedByMe) {
+            badge = `<span class="movement-badge out">${arrowUp} -${formatCurrency(movement.amount)}</span>`;
+        } else if (receivedByMe && !sentByMe) {
+            badge = `<span class="movement-badge in">${arrowDown} +${formatCurrency(movement.amount)}</span>`;
+        }
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${formatDate(movement.transferDate)}</td>
             <td>${movement.nameOrigin}</td>
             <td>${movement.nameDestiny}</td>
-            <td>${formatCurrency(movement.amount)}</td>
+            <td>${badge}</td>
         `;
         movementsBody.appendChild(row);
     });
@@ -89,4 +108,4 @@ accountSelector.addEventListener('change', function () {
     loadMovements(accountSelector.value);
 });
 
-loadAccounts();
+loadProfile().then(loadAccounts);

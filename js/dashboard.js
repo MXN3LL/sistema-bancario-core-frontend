@@ -30,6 +30,22 @@ function authFetch(path, options) {
     });
 }
 
+function animateBalance(target) {
+    const duration = 700;
+    const start = performance.now();
+
+    function step(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        totalBalanceEl.textContent = formatCurrency(target * eased);
+        if (progress < 1) {
+            requestAnimationFrame(step);
+        }
+    }
+
+    requestAnimationFrame(step);
+}
+
 function loadProfile() {
     authFetch('/api/auth/me')
         .then(function (response) { return response.json(); })
@@ -49,17 +65,27 @@ function renderAccounts(accounts) {
 
     if (accounts.length === 0) {
         emptyState.hidden = false;
-        totalBalanceEl.textContent = formatCurrency(0);
+        animateBalance(0);
         return;
     }
 
     emptyState.hidden = true;
 
-    accounts.forEach(function (account) {
+    accounts.forEach(function (account, index) {
         const li = document.createElement('li');
+        li.className = 'account-card';
+        li.style.animationDelay = (index * 0.08) + 's';
+        const last4 = account.accountNumber.slice(-4);
         li.innerHTML = `
-            <span>Cuenta ${account.accountNumber}<br><small>${account.isActive ? 'Activa' : 'Inactiva'}</small></span>
-            <span>${formatCurrency(account.balance)}</span>
+            <div class="account-card-top">
+                <span class="account-card-type">Cuenta ${account.accountNumber}</span>
+                <svg class="chip-icon" viewBox="0 0 24 18"><rect x="0.5" y="0.5" width="23" height="17" rx="3"/><line x1="0.5" y1="6" x2="23.5" y2="6"/><line x1="9" y1="0.5" x2="9" y2="17.5"/></svg>
+            </div>
+            <div class="account-card-number">•••• ${last4}</div>
+            <div class="account-card-bottom">
+                <span class="account-card-status">${account.isActive ? 'Activa' : 'Inactiva'}</span>
+                <span class="account-card-balance">${formatCurrency(account.balance)}</span>
+            </div>
         `;
         accountsContainer.appendChild(li);
     });
@@ -68,7 +94,7 @@ function renderAccounts(accounts) {
         return sum + account.balance;
     }, 0);
 
-    totalBalanceEl.textContent = formatCurrency(totalBalance);
+    animateBalance(totalBalance);
 }
 
 openAccountBtn.addEventListener('click', function () {

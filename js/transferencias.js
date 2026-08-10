@@ -27,6 +27,7 @@ const originSelect = document.getElementById('origin-account');
 const destinationInput = document.getElementById('destination-account');
 const conceptInput = document.getElementById('concept');
 const amountInput = document.getElementById('amount');
+const originBalanceEl = document.getElementById('origin-balance');
 
 const destinationError = document.getElementById('destination-account-error');
 const conceptError = document.getElementById('concept-error');
@@ -34,6 +35,11 @@ const amountError = document.getElementById('amount-error');
 const resultMessage = document.getElementById('result-message');
 
 let myAccounts = [];
+
+function updateBalanceStrip() {
+    const selected = myAccounts.find(function (a) { return a.idAccount === Number(originSelect.value); });
+    originBalanceEl.textContent = formatCurrency(selected ? selected.balance : 0);
+}
 
 function loadAccounts() {
     authFetch('/api/cuentas')
@@ -46,17 +52,22 @@ function loadAccounts() {
                 const option = document.createElement('option');
                 option.textContent = 'No tienes cuentas todavía';
                 originSelect.appendChild(option);
+                originBalanceEl.textContent = formatCurrency(0);
                 return;
             }
 
             accounts.forEach(function (account) {
                 const option = document.createElement('option');
                 option.value = account.idAccount;
-                option.textContent = `Cuenta ${account.accountNumber} (${formatCurrency(account.balance)})`;
+                option.textContent = `Cuenta ${account.accountNumber}`;
                 originSelect.appendChild(option);
             });
+
+            updateBalanceStrip();
         });
 }
+
+originSelect.addEventListener('change', updateBalanceStrip);
 
 transferForm.addEventListener('submit', function (event) {
     event.preventDefault();
